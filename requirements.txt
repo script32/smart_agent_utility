@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+semantic-kernel
+openai
+psycopg2
+python-dotenv
