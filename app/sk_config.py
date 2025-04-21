@@ -10,7 +10,7 @@ def create_kernel():
     kernel.add_chat_service(
         "default",
         AzureChatCompletion(
-            deployment_name=os.getenv("OPENAI_DEPLOYMENT_NAME"),
+            chat_deployment_name=os.getenv("OPENAI_DEPLOYMENT_NAME"),
             endpoint=os.getenv("OPENAI_ENDPOINT"),
             api_key=os.getenv("OPENAI_API_KEY")
         )

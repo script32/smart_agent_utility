@@ -1,6 +1,6 @@
 fastapi
 uvicorn
-semantic-kernel
 openai
-psycopg2
 python-dotenv
+psycopg2
+semantic-kernel==1.28.1
