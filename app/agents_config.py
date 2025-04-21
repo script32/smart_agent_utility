@@ -5,6 +5,7 @@ from semantic_kernel.agents import ChatCompletionAgent
 from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 from semantic_kernel.filters import FunctionInvocationContext
 from app.skills.sql_skill import SqlSkill
+from app.skills.crew_skill import CrewSkill
 
 load_dotenv()
 
@@ -25,6 +26,7 @@ def create_agents(kernel: Kernel) -> ChatCompletionAgent:
 
     # 🧠 Crear instancia compartida del plugin SQL
     sql_skill = SqlSkill()
+    crew_skill = CrewSkill()
 
     # ⚡ Agente de fallas eléctricas
     fault_agent = ChatCompletionAgent(
@@ -39,7 +41,7 @@ def create_agents(kernel: Kernel) -> ChatCompletionAgent:
         service=AzureChatCompletion(),
         name="CrewAgent",
         instructions="Entregas disponibilidad de cuadrillas en base a la comuna o eventos recientes.",
-        plugins=[sql_skill]
+        plugins=[crew_skill]
     )
 
     # 🌍 Agente geoespacial
@@ -64,13 +66,13 @@ def create_agents(kernel: Kernel) -> ChatCompletionAgent:
         name="Orquestador",
         kernel=kernel,
         instructions="""
-Eres un agente orquestador. Interpreta la intención del usuario y delega al agente correcto:
-- FaultAgent: fallas eléctricas
-- CrewAgent: cuadrillas disponibles
-- GeoAgent: preguntas geoespaciales
-- ReportAgent: generar respuestas entendibles
-Puedes combinar agentes si es necesario.
-""",
+        Eres un agente orquestador. Interpreta la intención del usuario y delega al agente correcto:
+        - FaultAgent: fallas eléctricas
+        - CrewAgent: cuadrillas disponibles
+        - GeoAgent: preguntas geoespaciales
+        - ReportAgent: generar respuestas entendibles
+        Puedes combinar agentes si es necesario.
+        """,
         plugins=[fault_agent, crew_agent, geo_agent, report_agent]
     )
 
