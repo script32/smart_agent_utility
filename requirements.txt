@@ -3,4 +3,6 @@ uvicorn
 openai
 python-dotenv
 psycopg2
+azure-ai-projects 
+azure-identity
 semantic-kernel==1.28.1
