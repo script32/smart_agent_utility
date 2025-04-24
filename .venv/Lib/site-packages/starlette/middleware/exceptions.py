@@ -28,7 +28,7 @@ class ExceptionMiddleware:
             HTTPException: self.http_exception,
             WebSocketException: self.websocket_exception,
         }
-        if handlers is not None:  # pragma: no branch
+        if handlers is not None:
             for key, value in handlers.items():
                 self.add_exception_handler(key, value)
 

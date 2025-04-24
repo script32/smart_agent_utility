@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
 # Inicializar FastAPI con Lifespan
 app = FastAPI(
     title="SmartField Multi-Agent API",
-    description="Agente orquestado con Semantic Kernel y Azure AI Foundry",
+    description="SmartField Multi-Agent AI with Azure Foundry is running.",
     version="1.0.0",
     lifespan=lifespan
 )

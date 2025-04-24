@@ -103,7 +103,7 @@ class WebSocket(HTTPConnection):
     ) -> None:
         headers = headers or []
 
-        if self.client_state == WebSocketState.CONNECTING:  # pragma: no branch
+        if self.client_state == WebSocketState.CONNECTING:
             # If we haven't yet seen the 'connect' message, then wait for it first.
             await self.receive()
         await self.send({"type": "websocket.accept", "subprotocol": subprotocol, "headers": headers})

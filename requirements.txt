@@ -5,4 +5,5 @@ python-dotenv
 psycopg2
 azure-ai-projects 
 azure-identity
+chainlit
 semantic-kernel==1.28.1

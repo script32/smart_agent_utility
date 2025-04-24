@@ -1,95 +1,80 @@
-
 import os
 from dotenv import load_dotenv
 from semantic_kernel import Kernel
 from semantic_kernel.agents import ChatCompletionAgent
 from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 from semantic_kernel.filters import FunctionInvocationContext
-from semantic_kernel.agents import AzureAIAgent, AzureAIAgentSettings
-from azure.identity.aio import DefaultAzureCredential
 
 from app.skills.sql_skill import SqlSkill
 from app.skills.crew_skill import CrewSkill
+from app.skills.foundry_skill import FoundryAgentPlugin
+
 
 load_dotenv()
 
+async def function_invocation_filter(context: FunctionInvocationContext, next):
+    print(f"⬆️ [{context.function.name}] called with: {context.arguments}")
+    await next(context)
+    print(f"⬇️ [{context.function.name}] result: {context.result.value}")
 
 async def create_kernel() -> Kernel:
     kernel = Kernel()
     kernel.add_filter("function_invocation", function_invocation_filter)
     return kernel
 
-
 async def create_agents(kernel: Kernel) -> ChatCompletionAgent:
-    # Agentes internos con plugins locales
+    # === Local Agents ===
     sql_skill = SqlSkill()
     crew_skill = CrewSkill()
+    foundry_plugin = FoundryAgentPlugin()
 
     fault_agent = ChatCompletionAgent(
         service=AzureChatCompletion(),
         name="FaultAgent",
-        instructions="Respondes consultas sobre eventos eléctricos. Usa SQLSkill para obtener datos.",
+        instructions="""You answer questions about electrical events and faults. Use SQLSkill.
+
+        - If the `reportar_falla_por_direccion` function is successfully executed, respond with a clear confirmation like "Your fault has been successfully registered".
+        - If the address is not found, suggest the user verify the street name.
+        - Avoid mentioning technical issues if the functions return successfully.
+        """,
         plugins=[sql_skill]
     )
 
     crew_agent = ChatCompletionAgent(
         service=AzureChatCompletion(),
         name="CrewAgent",
-        instructions="Entregas disponibilidad de cuadrillas por comuna o ubicación. Usa CrewSkill.",
+        instructions="You provide information about crews. Use CrewSkill.",
         plugins=[crew_skill]
     )
 
     geo_agent = ChatCompletionAgent(
         service=AzureChatCompletion(),
         name="GeoAgent",
-        instructions="Respondes consultas geográficas (líneas, comunas, zonas críticas).",
+        instructions="You answer geographic queries. Use SQLSkill.",
         plugins=[sql_skill]
     )
 
     report_agent = ChatCompletionAgent(
         service=AzureChatCompletion(),
         name="ReportAgent",
-        instructions="Redactas respuestas claras y explicativas para usuarios no técnicos.",
+        instructions="You write clear explanations based on technical data.",
         plugins=[]
     )
-
-    # Agente remoto desde Azure AI Foundry
-    credential = DefaultAzureCredential()
-    client = await AzureAIAgent.create_client(credential=credential)
-    agent_definition = await client.agents.get_agent(os.getenv("AZURE_AI_FOUNDATION_AGENT_ID"))
-
-    foundry_agent = AzureAIAgent(
-        client=client,
-        definition=agent_definition,
-    )
-
-    # Agente orquestador
+ 
+    # === Main Orchestrator Agent ===
     main_agent = ChatCompletionAgent(
-        name="Orquestador",
-        kernel=kernel,
         service=AzureChatCompletion(),
+        kernel=kernel,
+        name="Orquestador",
         instructions="""
-Eres un agente orquestador. Recibes preguntas generales y decides cuál agente especializado debe responder:
-- FaultAgent: para fallas eléctricas
-- CrewAgent: para cuadrillas o asignaciones operativas
-- GeoAgent: para temas geográficos o cobertura
-- ReportAgent: para redactar explicaciones
-- FoundryAgent: para normativa, procedimientos eléctricos o contexto técnico avanzado
-""",
-        plugins=[]
+        You are an orchestrator agent that routes questions to the following agents:
+        - FaultAgent: electrical faults and outage information
+        - CrewAgent: available or assigned crews
+        - GeoAgent: geographic analysis and affected areas
+        - ReportAgent: user-friendly explanations
+        - FoundryAgent: regulatory or advanced technical context
+        """,
+        plugins=[fault_agent, crew_agent, geo_agent, report_agent, foundry_plugin]
     )
-
-    main_agent.add_chat_participant("FaultAgent", fault_agent)
-    main_agent.add_chat_participant("CrewAgent", crew_agent)
-    main_agent.add_chat_participant("GeoAgent", geo_agent)
-    main_agent.add_chat_participant("ReportAgent", report_agent)
-    main_agent.add_chat_participant("FoundryAgent", foundry_agent)
 
     return main_agent
-
-
-# Logging de funciones invocadas (opcional)
-async def function_invocation_filter(context: FunctionInvocationContext, next):
-    print(f"➡️ [{context.function.name}] called with: {context.arguments}")
-    await next(context)
-    print(f"⬅️ [{context.function.name}] result: {context.result.value}")
