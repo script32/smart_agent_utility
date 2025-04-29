@@ -128,3 +128,6 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
  This project is licensed under the MIT License.
 See the LICENSE file for details.
 
+
+## Video
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/kb8b04hwXZ4/0.jpg)](https://www.youtube.com/watch?v=kb8b04hwXZ4)

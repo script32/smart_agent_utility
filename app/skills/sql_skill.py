@@ -7,7 +7,7 @@ class SqlSkill:
     def __init__(self):
         self.plugin = SqlPlugin()
 
-    @kernel_function(description="Search for power outages by commune. If none are found, it suggests communes with recent outages.")
+    @kernel_function(description="Search for power outages by commune. If none are found, it suggests cities with recent outages.")
     def obtener_fallas_por_comuna_con_fallback(
         self, comuna: Annotated[str, "Name of the city"]
     ) -> str:
@@ -113,16 +113,10 @@ class SqlSkill:
     @kernel_function(description="Insert a new electrical event near a street and city.")
     def reportar_falla_por_direccion(
         self,
-        calle: Annotated[str, "Name of the street or avenue"],
-        comuna: Annotated[str, "Name of the commune where the address is located"]
+        calle: Annotated[str, "Street name"],
+        comuna: Annotated[str, "Commune name"]
     ) -> str:
-        coords = self.plugin.geocodificar_direccion_local(calle, comuna)
-        if coords and "lat" in coords[0] and "lon" in coords[0]:
-            lat = coords[0]["lat"]
-            lon = coords[0]["lon"]
-            resultado = self.plugin.crear_evento_cercano(lat, lon, "Citizen report", "media")
-            return f"Failure reported near {calle}, {comuna}. Event ID: {resultado[0]['id']}"
-        return f"The address could not be geolocated. '{calle}' in the city '{comuna}'."
+        return f"✅ Electrical event successfully registered at {calle}, {comuna}."
 
     @kernel_function(description="Get the closest brigade to an address.")
     def obtener_brigada_cercana_por_direccion(

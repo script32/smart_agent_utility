@@ -1,5 +1,6 @@
 import psycopg2
 import os
+import requests
 
 
 class SqlPlugin:
@@ -35,8 +36,7 @@ class SqlPlugin:
                    e.nombre_comuna
             FROM comunas_chile e
             JOIN eventos_transmision c ON ST_Intersects(ST_Transform(c.ubicacion, 3857), e.geom)
-            WHERE LOWER(e.nombre_comuna) = %s
-              AND c.fecha_evento >= CURRENT_DATE - INTERVAL '7 days'
+            WHERE LOWER(e.nombre_comuna) = %s              
         """
         eventos = self._run_query(query_eventos, (comuna,))
         if eventos:
@@ -46,7 +46,6 @@ class SqlPlugin:
             SELECT e.nombre_comuna, COUNT(*) as cantidad_fallas
             FROM comunas_chile e
             JOIN eventos_transmision c ON ST_Intersects(ST_Transform(c.ubicacion, 3857), e.geom)
-            WHERE c.fecha_evento >= CURRENT_DATE - INTERVAL '7 days'
             GROUP BY e.nombre_comuna
             ORDER BY cantidad_fallas DESC
             LIMIT 10
@@ -81,7 +80,6 @@ class SqlPlugin:
             SELECT id, tipo_evento, fecha_evento, ST_AsGeoJSON(ubicacion) AS geojson
             FROM eventos_transmision
             WHERE linea_id = %s
-              AND fecha_evento >= CURRENT_DATE - INTERVAL '30 days'
         """
         return self._run_query(query, (id_linea,))
 
@@ -99,7 +97,6 @@ class SqlPlugin:
             FROM comunas_chile e
             JOIN eventos_transmision c ON ST_Intersects(ST_Transform(c.ubicacion, 3857), e.geom)
             WHERE LOWER(e.nombre_comuna) = %s
-              AND c.fecha_evento >= CURRENT_DATE - INTERVAL '30 days'
         """
         return self._run_query(query, (comuna,))
 
@@ -125,18 +122,23 @@ class SqlPlugin:
         return self._run_query(query, (comuna,))
 
     # Geocodificación local
-    def geocodificar_direccion_local(self, calle: str, comuna: str):
-        query = """
-            SELECT ST_X(ST_Centroid(w.geometry)) AS lon,
-                   ST_Y(ST_Centroid(w.geometry)) AS lat
-            FROM way w
-            JOIN comunas_chile c ON ST_Intersects(w.geometry, c.geom)
-            WHERE LOWER(w.name) ILIKE LOWER(%s)
-              AND LOWER(c.nombre_comuna) = LOWER(%s)
-              AND w.geometry IS NOT NULL
-            LIMIT 1
-        """
-        return self._run_query(query, (calle, comuna))
+    def reportar_falla_por_direccion(self, calle: str, comuna: str):
+        try:
+            url = f"https://nominatim.openstreetmap.org/search?q={calle}, {comuna}, Chile&format=json&limit=1"
+            headers = {
+                "User-Agent": "SmartAgentsUtilityBot/1.0 (cristianrodr@gmail.com)"
+            }
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            if data:
+                return {"lat": float(data[0]["lat"]), "lon": float(data[0]["lon"])}
+        except Exception as e:
+            print(f"Error geocodificando dirección: {e}")
+        return None
+
+
+
 
     # Crear evento
     def crear_evento_cercano(self, lat: float, lon: float, tipo_evento: str, criticidad: str):
